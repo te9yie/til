@@ -15,6 +15,25 @@ class Chunk {
   Chunk& operator=(const Chunk&) = delete;
   Chunk& operator=(Chunk&&) = delete;
 
+ public:
+  template <typename... Ts>
+  struct AccessTuple {
+    using tuple_type = std::tuple<Ts...>;
+    template <std::size_t I>
+    using element_type = std::tuple_element_t<I, tuple_type>;
+
+    Chunk* chunk = nullptr;
+    std::size_t index = 0;
+
+    AccessTuple() = default;
+    AccessTuple(Chunk* chunk, std::size_t index) : chunk(chunk), index(index) {}
+
+    template <std::size_t I>
+    element_type<I> get() {
+      return *chunk->get<element_type<I>>(index);
+    }
+  };
+
  private:
   static const std::size_t BUFF_SIZE = 16 * 1024;
 
@@ -67,6 +86,11 @@ class Chunk {
     return reinterpret_cast<T*>(ptr);
   }
 
+  template <typename... Ts>
+  AccessTuple<Ts...> as_tuple(std::size_t index) {
+    return AccessTuple<Ts...>(this, index);
+  }
+
   template <typename F, typename... Ts>
   void each(F f, type_list<Ts...>) {
     for (std::size_t i = 0; i < peak_index_; ++i) {
@@ -76,6 +100,7 @@ class Chunk {
   }
 
   std::size_t capacity() const { return indices_.size(); }
+  std::size_t size() const { return peak_index_; }
   bool is_full() const { return next_index_ >= indices_.size(); }
 
   template <typename... Ts>

@@ -30,7 +30,7 @@ class Chunk {
 
     template <std::size_t I>
     element_type<I> get() {
-      return *chunk->get<element_type<I>>(index);
+      return *chunk->get<sanitalize_t<element_type<I>>>(index);
     }
   };
 
@@ -80,6 +80,7 @@ class Chunk {
 
   template <typename T>
   T* get(std::size_t index) {
+    assert(is_use(index));
     std::size_t offset = 0;
     if (!tuple_->try_get_offset<T>(&offset)) return nullptr;
     auto ptr = buff_ + tuple_->memory_size() * index + offset;
@@ -88,6 +89,7 @@ class Chunk {
 
   template <typename... Ts>
   AccessTuple<Ts...> as_tuple(std::size_t index) {
+    assert(is_use(index));
     return AccessTuple<Ts...>(this, index);
   }
 
@@ -102,6 +104,7 @@ class Chunk {
   std::size_t capacity() const { return indices_.size(); }
   std::size_t size() const { return peak_index_; }
   bool is_full() const { return next_index_ >= indices_.size(); }
+  bool is_use(std::size_t i) const { return indices_[i].use; }
 
   template <typename... Ts>
   bool contains() {
@@ -118,3 +121,16 @@ class Chunk {
 };
 
 }  // namespace ecs
+
+namespace std {
+
+template <typename... Ts>
+struct tuple_size<ecs::Chunk::AccessTuple<Ts...>>
+    : std::integral_constant<size_t, sizeof...(Ts)> {};
+
+template <std::size_t I, typename... Ts>
+struct tuple_element<I, ecs::Chunk::AccessTuple<Ts...>> {
+  using type = std::tuple_element_t<I, std::tuple<Ts...>>;
+};
+
+}  // namespace std

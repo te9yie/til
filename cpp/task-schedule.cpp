@@ -82,10 +82,13 @@ class JobExecutor {
     }
   }
 
-  void submit(const t9::Rc<JobBase>& job) {
+  bool submit(const t9::Rc<JobBase>& job) {
+    if (!job || job->is_submitted()) return false;
+
     job->enqueue();
     jobs_.push_back(job);
     condition_.notify_one();
+    return true;
   }
 
   void run_all_jobs() {
@@ -181,7 +184,7 @@ class TaskScheduler {
   TaskType* first_task_ = nullptr;
 
  public:
-  TaskScheduler(std::size_t n) : jobExecutor_(n) {}
+  explicit TaskScheduler(std::size_t n) : jobExecutor_(n) {}
 
   template <class F>
   TaskType* create(int phase, F f) {
@@ -257,7 +260,6 @@ int main() {
 
   Foo foo;
 
-  // TaskScheduler<int> tasks(2);
   TaskScheduler<int> tasks(std::max(n, 1U));
 
   tasks.create(1, [&foo](int frame) { foo.print<0>(frame); });

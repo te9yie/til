@@ -9,3 +9,4 @@ else()
 endif()
 
 add_executable(structured-bindings structured-bindings.cpp)
+add_executable(task-schedule task-schedule.cpp)

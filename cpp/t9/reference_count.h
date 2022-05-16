@@ -43,6 +43,7 @@ class Rc final {
 
  public:
   Rc() = default;
+  Rc(std::nullptr_t) {}
   Rc(T* p, bool with_grab) : object_(p) {
     if (p && with_grab) {
       p->grab();

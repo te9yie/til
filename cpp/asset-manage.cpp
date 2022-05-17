@@ -152,9 +152,9 @@ class AssetManager : private AssetOwner {
     };
     auto asset = new Asset(param);
     assets_[index].asset.reset(asset);
+    indices_.emplace(AssetPath{asset->path(), hash}, index);
     asset->load();
     asset->postprocess();
-    indices_.emplace(AssetPath{asset->path(), hash}, index);
     return t9::Rc<Asset>(asset, false);
   }
   t9::Rc<Asset> find(std::string_view path) {

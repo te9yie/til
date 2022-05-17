@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -26,25 +28,41 @@ class AssetOwner {
 
 class Asset : public t9::RcObject {
  public:
-  enum class ReturnCode {
-    OK,
+  enum class State {
+    INIT,
+    LOADED,
+    READY,
     NOT_FOUND,
+    INVALID,
+  };
+
+  struct InitParam {
+    AssetId id;
+    std::string_view path;
+    std::uint32_t path_hash = 0;
+    AssetOwner* owner = nullptr;
   };
 
  private:
+  AssetId id_;
   std::string path_;
   std::uint32_t path_hash_ = 0;
-  AssetId id_;
   std::vector<char> data_;
   AssetOwner* owner_ = nullptr;
+  State state_ = State::INIT;
 
  public:
-  Asset() = default;
+  explicit Asset(const InitParam& param)
+      : id_(param.id),
+        path_(param.path),
+        path_hash_(param.path_hash),
+        owner_(param.owner) {}
 
-  ReturnCode load() {
+  void load() {
     std::ifstream in(path_, std::ios::binary);
     if (!in.is_open()) {
-      return ReturnCode::NOT_FOUND;
+      state_ = State::NOT_FOUND;
+      return;
     }
 
     in.seekg(0, std::ios_base::end);
@@ -54,14 +72,29 @@ class Asset : public t9::RcObject {
     data_.resize(size);
     in.read(data_.data(), size);
 
-    return ReturnCode::OK;
+    state_ = on_load() ? State::LOADED : State::INVALID;
+  }
+
+  void postprocess() {
+    if (state_ == State::LOADED) {
+      state_ = on_postprocess() ? State::READY : State::INVALID;
+    }
   }
 
   std::string_view path() const { return path_; }
   std::uint32_t path_hash() const { return path_hash_; }
   AssetId id() const { return id_; }
+  const char* data() const { return data_.data(); }
+  std::size_t data_size() const { return data_.size(); }
+
+  bool is_ready() const { return state_ == State::READY; }
 
  protected:
+  bool on_load() { return true; }
+  bool on_postprocess() { return true; }
+
+ protected:
+  // t9::RcObject.
   virtual void on_drop() override {
     if (owner_) {
       owner_->on_drop_asset(id_);
@@ -95,6 +128,7 @@ class AssetManager : private AssetOwner {
   StorageDeque assets_;
   IndexDeque deleted_indices_;
   IndexMap indices_;
+  IndexDeque delete_requests_;
 
  public:
   t9::Rc<Asset> load(std::string_view path) {
@@ -102,7 +136,26 @@ class AssetManager : private AssetOwner {
     if (auto asset = find_(path, hash)) {
       return t9::Rc<Asset>(asset, true);
     }
-    return nullptr;
+    std::size_t index = 0;
+    if (deleted_indices_.empty()) {
+      index = assets_.size();
+      assets_.emplace_back().revision = 1u;
+    } else {
+      index = deleted_indices_.front();
+      deleted_indices_.pop_front();
+    }
+    Asset::InitParam param{
+        AssetId{index, assets_[index].revision},
+        path,
+        hash,
+        this,
+    };
+    auto asset = new Asset(param);
+    assets_[index].asset.reset(asset);
+    asset->load();
+    asset->postprocess();
+    indices_.emplace(AssetPath{asset->path(), hash}, index);
+    return t9::Rc<Asset>(asset, false);
   }
   t9::Rc<Asset> find(std::string_view path) {
     auto hash = t9::make_string_hash(path);
@@ -112,20 +165,49 @@ class AssetManager : private AssetOwner {
     return nullptr;
   }
 
+  void proccess_delete_requests() {
+    for (auto index : delete_requests_) {
+      if (!assets_[index].asset) continue;
+      if (assets_[index].asset->reference_count() > 0) continue;
+      remove_(index);
+    }
+    delete_requests_.clear();
+  }
+
  private:
   Asset* find_(std::string_view path, std::uint32_t hash) {
     auto it = indices_.find(AssetPath{path, hash});
     if (it == indices_.end()) return nullptr;
     return assets_[it->second].asset.get();
   }
+  void remove_(std::size_t index) {
+    auto& storage = assets_[index];
+    auto asset = storage.asset.get();
+    indices_.erase(AssetPath{asset->path(), asset->path_hash()});
+    deleted_indices_.push_back(index);
+    storage.revision = std::max(storage.revision + 1, 1u);
+    storage.asset.reset();
+  }
 
  private:
   virtual void on_drop_asset(AssetId id) override {
-    deleted_indices_.emplace_back(id.index);
+    delete_requests_.emplace_back(id.index);
   }
 };
 
 int main() {
-  std::cout << "Hello" << std::endl;
-  std::cout << "Hello" << std::endl;
+  AssetManager assets;
+  {
+    auto a = assets.load("til.sln");
+    if (a->is_ready()) {
+      std::cout << a->path() << " is ready." << std::endl;
+    }
+  }
+  {
+    auto a = assets.load("til.sln");
+    if (a->is_ready()) {
+      std::cout << a->path() << " is ready." << std::endl;
+    }
+  }
+  assets.proccess_delete_requests();
 }

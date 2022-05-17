@@ -8,5 +8,6 @@ else()
     add_compile_options(-W -Wall)
 endif()
 
+add_executable(asset-manage asset-manage.cpp)
 add_executable(structured-bindings structured-bindings.cpp)
 add_executable(task-schedule task-schedule.cpp)

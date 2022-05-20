@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
-    <RootNamespace>table_data_def</RootNamespace>
+    <RootNamespace>read_excel</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

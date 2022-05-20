@@ -1,7 +1,7 @@
 ﻿using ClosedXML.Excel;
 using System;
 
-namespace table_data_def
+namespace read_excel
 {
     class Program
     {

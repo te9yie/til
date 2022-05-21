@@ -30,6 +30,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
   const int SCREEN_HEIGHT = 9 * 80;
 
   if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) < 0) {
+    SDL_LogCritical(SDL_LOG_CATEGORY_SYSTEM, "%s", SDL_GetError());
     return EXIT_FAILURE;
   }
   atexit(SDL_Quit);
@@ -38,11 +39,13 @@ int main(int /*argc*/, char* /*argv*/[]) {
       TITLE, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH,
       SCREEN_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE));
   if (!window) {
+    SDL_LogCritical(SDL_LOG_CATEGORY_VIDEO, "%s", SDL_GetError());
     return EXIT_FAILURE;
   }
 
   ContextPtr context(SDL_GL_CreateContext(window.get()));
   if (!context) {
+    SDL_LogCritical(SDL_LOG_CATEGORY_VIDEO, "%s", SDL_GetError());
     return EXIT_FAILURE;
   }
 

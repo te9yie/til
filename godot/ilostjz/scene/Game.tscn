@@ -1,12 +1,19 @@
 [gd_scene load_steps=3 format=2]
 
-[ext_resource path="res://scene/Title.tscn" type="PackedScene" id=1]
+[ext_resource path="res://scene/Theme.tres" type="Theme" id=1]
 [ext_resource path="res://scene/Field.tscn" type="PackedScene" id=2]
 
 [node name="Game" type="Node2D"]
 
 [node name="Field" parent="." instance=ExtResource( 2 )]
-position = Vector2( 332, 194 )
+position = Vector2( 404, 130 )
 
-[node name="Title" parent="." instance=ExtResource( 1 )]
-position = Vector2( 10, 30 )
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Label" type="Label" parent="CanvasLayer"]
+margin_left = 10.0
+margin_top = 5.0
+margin_right = 40.0
+margin_bottom = 14.0
+theme = ExtResource( 1 )
+text = "I LOST JZ"

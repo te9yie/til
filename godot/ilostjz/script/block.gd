@@ -7,7 +7,10 @@ enum BlockType {
 	T,
 	J,
 	Z,
+	COUNT
 }
+
+const BLOCK_SIZE = 20
 
 const I_SHAPE: Array = [
 	[
@@ -31,9 +34,9 @@ const L_SHAPE: Array = [
 		0, 0, 0, 0,
 	],
 	[
+		1, 1, 0, 0,
 		0, 1, 0, 0,
 		0, 1, 0, 0,
-		0, 1, 1, 0,
 		0, 0, 0, 0,
 	],
 	[
@@ -43,9 +46,9 @@ const L_SHAPE: Array = [
 		0, 0, 0, 0,
 	],
 	[
-		1, 1, 0, 0,
 		0, 1, 0, 0,
 		0, 1, 0, 0,
+		0, 1, 1, 0,
 		0, 0, 0, 0,
 	],
 ]
@@ -80,7 +83,7 @@ const T_SHAPE: Array = [
 	],
 	[
 		0, 1, 0, 0,
-		0, 1, 1, 0,
+		1, 1, 0, 0,
 		0, 1, 0, 0,
 		0, 0, 0, 0,
 	],
@@ -92,7 +95,7 @@ const T_SHAPE: Array = [
 	],
 	[
 		0, 1, 0, 0,
-		1, 1, 0, 0,
+		0, 1, 1, 0,
 		0, 1, 0, 0,
 		0, 0, 0, 0,
 	],
@@ -105,9 +108,9 @@ const J_SHAPE: Array = [
 		0, 0, 0, 0,
 	],
 	[
-		0, 1, 1, 0,
 		0, 1, 0, 0,
 		0, 1, 0, 0,
+		1, 1, 0, 0,
 		0, 0, 0, 0,
 	],
 	[
@@ -117,9 +120,9 @@ const J_SHAPE: Array = [
 		0, 0, 0, 0,
 	],
 	[
+		0, 1, 1, 0,
 		0, 1, 0, 0,
 		0, 1, 0, 0,
-		1, 1, 0, 0,
 		0, 0, 0, 0,
 	],
 ]
@@ -167,3 +170,6 @@ static func get_shape(type: int, index: int) -> Array:
 			return Z_SHAPE[index % Z_SHAPE.size()]
 		_:
 			return []
+
+static func draw_block(g: Node2D, x: int, y: int, type: int) -> void:
+	g.draw_rect(Rect2(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE), get_color(type))

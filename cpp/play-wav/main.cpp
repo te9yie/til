@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <memory>
+#include <vector>
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl.h"
@@ -22,6 +23,71 @@ struct DestroyRenderer {
 };
 using RendererPtr = std::unique_ptr<SDL_Renderer, DestroyRenderer>;
 
+std::vector<float> make_saw(int freq, float hz) {
+  std::vector<float> data(freq);
+  for (int i = 0; i < freq; ++i) {
+    const float t = i * hz / freq;
+    const float ft = t - std::floorf(t);
+    data[i] = (ft - 0.5f) * 2.0f;
+  }
+  return data;
+}
+std::vector<float> make_sin(int freq, float hz) {
+  std::vector<float> data(freq);
+  for (int i = 0; i < freq; ++i) {
+    const float t = i * hz / freq;
+    data[i] = std::sinf(t * 2 * 3.14159f);
+  }
+  return data;
+}
+
+std::vector<float> make_rosenberg(int freq, float hz, float tau1, float tau2) {
+  std::vector<float> data(freq);
+  for (int i = 0; i < freq; ++i) {
+    const float t = i * hz / freq;
+    const float ft = t - std::floorf(t);
+    if (ft <= tau1) {
+      data[i] =
+          3.0f * std::powf(ft / tau1, 2.0f) - 2.0f * std::powf(ft / tau1, 3.0f);
+    } else if (ft < tau1 + tau2) {
+      data[i] = 1.0f - std::powf((ft - tau1) / tau2, 2.0f);
+    } else {
+      data[i] = 0.0f;
+    }
+  }
+  return data;
+}
+
+class SoundPlayer {
+ private:
+  const float* data_ptr_ = nullptr;
+  std::size_t data_size_ = 0;
+  std::size_t play_index_ = 0;
+
+ public:
+  SoundPlayer() = default;
+
+  void setup(const float* data, std::size_t size) {
+    data_ptr_ = data;
+    data_size_ = size;
+    play_index_ = 0;
+  }
+  void tear_down() {
+    data_ptr_ = nullptr;
+    data_size_ = 0;
+    play_index_ = 0;
+  }
+
+  float next() {
+    if (play_index_ < data_size_) {
+      return *(data_ptr_ + play_index_++);
+    }
+    return 0.0f;
+  }
+
+  void rewind() { play_index_ = 0; }
+};
+
 class AudioDevice {
  private:
   AudioDevice(const AudioDevice&) = delete;
@@ -32,6 +98,10 @@ class AudioDevice {
  private:
   SDL_AudioDeviceID device_ = 0;
   SDL_AudioSpec spec_;
+  float volume_ = 0.5f;
+
+  std::vector<float> sound_data_;
+  SoundPlayer player_;
 
  public:
   AudioDevice() = default;
@@ -72,27 +142,31 @@ class AudioDevice {
     self->on_callback(stream, len);
   }
 
-  float hz_ = 220.0f;
-  float volume_ = 0.5f;
-  int step_ = 0;
-
-  float wave(float t) { return std::cosf(t * 2 * 3.14159f); }
-
   void on_callback(Uint8* stream, int len) {
     auto frames = reinterpret_cast<Sint16*>(stream);
     auto channels = static_cast<int>(spec_.channels);
     auto size = len / (sizeof(Sint16) / sizeof(Uint8)) / channels;
-    auto volume = SDL_MAX_SINT16 * volume_;
-    for (int i = 0; i < size; ++i, ++step_) {
+    auto volume = 30000 /* nearly SDL_MAX_SINT16 */ * volume_;
+    for (int i = 0; i < size; ++i) {
+      const auto p = player_.next();
       for (int j = 0; j < channels; ++j) {
         frames[i * channels + j] = static_cast<Sint16>(std::clamp<int>(
-            static_cast<int>(wave(step_ * hz_ / spec_.freq) * volume),
-            SDL_MIN_SINT16, SDL_MAX_SINT16));
+            static_cast<int>(p * volume), SDL_MIN_SINT16, SDL_MAX_SINT16));
       }
     }
   }
 
  public:
+  enum {
+    SIN,
+    SAW,
+    ROSENBERG,
+  };
+
+  int type_ = SIN;
+  float tau1_ = 0.9f;
+  float tau2_ = 0.05f;
+
   void on_debug_gui() {
     if (device_ == 0) return;
 
@@ -121,8 +195,24 @@ class AudioDevice {
         break;
     }
 
+    if (ImGui::Button("resume")) {
+      SDL_PauseAudioDevice(device_, 0);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("pause")) {
+      SDL_PauseAudioDevice(device_, 1);
+    }
+
+    const char* TYPE_NAME[] = {"Sin", "Saw", "Rosenberg"};
+    ImGui::Combo("type", &type_, TYPE_NAME,
+                 static_cast<int>(std::size(TYPE_NAME)));
+    switch (type_) {
+      case ROSENBERG:
+        ImGui::InputFloat("tau1", &tau1_);
+        ImGui::InputFloat("tau2", &tau2_);
+        break;
+    }
     ImGui::SliderFloat("Volume", &volume_, 0.0f, 1.0f);
-    ImGui::InputFloat("Hz", &hz_);
 
     // clang-format off
     const struct {
@@ -139,23 +229,25 @@ class AudioDevice {
     };
     // clang-format on
 
-    if (ImGui::Button("silence")) {
-      hz_ = spec_.silence;
-    }
-
+    ImGui::Spacing();
     for (auto it : scale) {
       ImGui::SameLine();
       if (ImGui::Button(it.name)) {
-        hz_ = it.hz;
+        SDL_LockAudioDevice(device_);
+        switch (type_) {
+          case SIN:
+            sound_data_ = make_sin(spec_.freq, it.hz);
+            break;
+          case SAW:
+            sound_data_ = make_saw(spec_.freq, it.hz);
+            break;
+          case ROSENBERG:
+            sound_data_ = make_rosenberg(spec_.freq, it.hz, tau1_, tau2_);
+            break;
+        }
+        player_.setup(sound_data_.data(), sound_data_.size());
+        SDL_UnlockAudioDevice(device_);
       }
-    }
-
-    if (ImGui::Button("resume")) {
-      SDL_PauseAudioDevice(device_, 0);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("pause")) {
-      SDL_PauseAudioDevice(device_, 1);
     }
   }
 };

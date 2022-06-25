@@ -39,14 +39,14 @@ class AudioDevice {
   bool create() {
     SDL_AudioSpec spec;
     SDL_zero(spec);
-    spec.freq = 48 * 1000;  // 48kHz
+    spec.freq = 44100;  // 44.1kHz
     spec.format = AUDIO_S16;
-    spec.samples = 1 * 1024;
+    spec.samples = 4096;
 
-    return create_with_spec(&spec);
+    return create_with_spec(spec);
   }
-  bool create_with_spec(const SDL_AudioSpec* spec) {
-    SDL_AudioSpec copy = *spec;
+  bool create_with_spec(const SDL_AudioSpec& spec) {
+    SDL_AudioSpec copy = spec;
     copy.callback = on_callback_static;
     copy.userdata = this;
 
@@ -67,20 +67,29 @@ class AudioDevice {
  private:
   static void on_callback_static(void* arg, Uint8* stream, int len) {
     auto self = reinterpret_cast<AudioDevice*>(arg);
+    SDL_memset(stream, self->spec_.silence, len);
     self->on_callback(stream, len);
   }
 
-  float hz_ = 130.813f;
-  float volume_ = 3000;
+  float hz_ = 220.0f;
+  float volume_ = 0.5f;
   int step_ = 0;
 
   float wave(float t) { return std::cosf(t * 2 * 3.14f); }
 
   void on_callback(Uint8* stream, int len) {
-    auto frames = reinterpret_cast<Uint16*>(stream);
-    auto size = len / 2;
+    auto frames = reinterpret_cast<Sint16*>(stream);
+    auto channels = static_cast<int>(spec_.channels);
+    auto size = len / (sizeof(Sint16) / sizeof(Uint8)) / channels;
+    auto volume = SDL_MAX_SINT16 * volume_;
     for (int i = 0; i < size; ++i, ++step_) {
-      frames[i] = static_cast<Uint16>(wave(step_ * hz_ / spec_.freq) * volume_);
+      for (int j = 0; j < channels; ++j) {
+        frames[i * channels + j] = std::min<Sint16>(
+            SDL_MAX_SINT16,
+            std::max<Sint16>(
+                SDL_MIN_SINT16,
+                static_cast<Uint16>(wave(step_ * hz_ / spec_.freq) * volume)));
+      }
     }
   }
 
@@ -88,11 +97,11 @@ class AudioDevice {
   void on_debug_gui() {
     if (device_ == 0) return;
 
-    ImGui::Begin("Audio");
     ImGui::Text("freq: %d", spec_.freq);
-    ImGui::Text("format: %d", spec_.format);
-    ImGui::Text("channels: %d", spec_.channels);
-    ImGui::Text("samples: %d", spec_.samples);
+    ImGui::Text("channels: %u", spec_.channels);
+    ImGui::Text("samples: %u", spec_.samples);
+    ImGui::Text("silence: %u", spec_.silence);
+    ImGui::Text("size: %u", spec_.size);
 
     ImGui::Separator();
 
@@ -113,8 +122,34 @@ class AudioDevice {
         break;
     }
 
-    ImGui::InputFloat("Volume", &volume_);
+    ImGui::SliderFloat("Volume", &volume_, 0.0f, 1.0f);
     ImGui::InputFloat("Hz", &hz_);
+
+    // clang-format off
+    const struct {
+      const char* name;
+      float hz;
+    } scale[] = {
+        { "C", 130.813f, },
+        { "D", 146.832f, },
+        { "E", 164.814f, },
+        { "F", 174.614f, },
+        { "G", 195.998f, },
+        { "A", 220.000f, },
+        { "B", 246.942f, },
+    };
+    // clang-format on
+
+    if (ImGui::Button("silence")) {
+      hz_ = spec_.silence;
+    }
+
+    for (auto it : scale) {
+      ImGui::SameLine();
+      if (ImGui::Button(it.name)) {
+        hz_ = it.hz;
+      }
+    }
 
     if (ImGui::Button("resume")) {
       SDL_PauseAudioDevice(device_, 0);
@@ -151,14 +186,16 @@ int main(int /*argc*/, char* /*argv*/[]) {
     return EXIT_FAILURE;
   }
 
-  AudioDevice audio;
-  if (!audio.create()) return EXIT_FAILURE;
-
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
 
   ImGui_ImplSDL2_InitForSDLRenderer(window.get(), renderer.get());
   ImGui_ImplSDLRenderer_Init(renderer.get());
+
+  std::unique_ptr<AudioDevice> audio;
+  int freq = 44100;  // 44.1kHz
+  int channels = 2;
+  int samples = 4096;  // ref. SDL_LoadWAV()
 
   bool loop = true;
   while (loop) {
@@ -176,7 +213,31 @@ int main(int /*argc*/, char* /*argv*/[]) {
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    audio.on_debug_gui();
+    ImGui::Begin("Audio");
+
+    if (audio) {
+      if (ImGui::Button("DESTROY")) {
+        audio.reset();
+      } else {
+        audio->on_debug_gui();
+      }
+    } else {
+      ImGui::InputInt("freq", &freq);
+      ImGui::InputInt("channels", &channels);
+      ImGui::InputInt("samples", &samples);
+      if (ImGui::Button("CREATE")) {
+        std::unique_ptr<AudioDevice> new_audio(new AudioDevice);
+        SDL_AudioSpec spec;
+        SDL_zero(spec);
+        spec.freq = freq;
+        spec.samples = static_cast<Uint16>(samples);
+        spec.channels = static_cast<Uint8>(channels);
+        spec.format = AUDIO_S16;
+        if (new_audio->create_with_spec(spec)) {
+          audio = std::move(new_audio);
+        }
+      }
+    }
 
     ImGui::End();
 

@@ -1,6 +1,7 @@
 #include <SDL.h>
 #include <SDL_audio.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <memory>
@@ -75,7 +76,7 @@ class AudioDevice {
   float volume_ = 0.5f;
   int step_ = 0;
 
-  float wave(float t) { return std::cosf(t * 2 * 3.14f); }
+  float wave(float t) { return std::cosf(t * 2 * 3.14159f); }
 
   void on_callback(Uint8* stream, int len) {
     auto frames = reinterpret_cast<Sint16*>(stream);
@@ -84,11 +85,9 @@ class AudioDevice {
     auto volume = SDL_MAX_SINT16 * volume_;
     for (int i = 0; i < size; ++i, ++step_) {
       for (int j = 0; j < channels; ++j) {
-        frames[i * channels + j] = std::min<Sint16>(
-            SDL_MAX_SINT16,
-            std::max<Sint16>(
-                SDL_MIN_SINT16,
-                static_cast<Uint16>(wave(step_ * hz_ / spec_.freq) * volume)));
+        frames[i * channels + j] = static_cast<Sint16>(std::clamp<int>(
+            static_cast<int>(wave(step_ * hz_ / spec_.freq) * volume),
+            SDL_MIN_SINT16, SDL_MAX_SINT16));
       }
     }
   }

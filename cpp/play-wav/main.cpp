@@ -2,6 +2,7 @@
 #include <SDL_audio.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdlib>
 #include <memory>
@@ -23,15 +24,6 @@ struct DestroyRenderer {
 };
 using RendererPtr = std::unique_ptr<SDL_Renderer, DestroyRenderer>;
 
-std::vector<float> make_saw(int freq, float hz) {
-  std::vector<float> data(freq);
-  for (int i = 0; i < freq; ++i) {
-    const float t = i * hz / freq;
-    const float ft = t - std::floorf(t);
-    data[i] = (ft - 0.5f) * 2.0f;
-  }
-  return data;
-}
 std::vector<float> make_sin(int freq, float hz) {
   std::vector<float> data(freq);
   for (int i = 0; i < freq; ++i) {
@@ -88,6 +80,41 @@ class SoundPlayer {
   void rewind() { play_index_ = 0; }
 };
 
+class BpfFilter {
+ private:
+  std::array<float, 5> params_ = {0.0f};
+  std::array<float, 4> delay_ = {0.0f};
+
+ public:
+  void setup(int freq, float hz, float q) {
+    float omega = 2.0f * 3.14159f * hz / freq;
+    float alpha = std::sinf(omega) / (2.0f * q);
+    float a0 = 1.0f + alpha;
+
+    params_[0] = alpha / a0;
+    params_[1] = 0.0f / a0;
+    params_[2] = -alpha / a0;
+    params_[3] = -2.0f * std::cosf(omega) / a0;
+    params_[4] = (1.0f - alpha) / a0;
+  }
+
+  float apply(float base) {
+    float sample = 0.0f;
+    sample += params_[0] * base;
+    sample += params_[1] * delay_[0];
+    sample += params_[2] * delay_[1];
+    sample -= params_[3] * delay_[2];
+    sample -= params_[4] * delay_[3];
+
+    delay_[1] = delay_[0];
+    delay_[0] = base;
+    delay_[3] = delay_[2];
+    delay_[2] = sample;
+
+    return sample;
+  }
+};
+
 class AudioDevice {
  private:
   AudioDevice(const AudioDevice&) = delete;
@@ -100,6 +127,7 @@ class AudioDevice {
   SDL_AudioSpec spec_;
   float volume_ = 0.5f;
 
+  std::vector<float> raw_sound_data_;
   std::vector<float> sound_data_;
   SoundPlayer player_;
 
@@ -159,13 +187,33 @@ class AudioDevice {
  public:
   enum {
     SIN,
-    SAW,
     ROSENBERG,
+  };
+
+  enum {
+    VOWEL_A,
+    VOWEL_I,
+    VOWEL_U,
+    VOWEL_E,
+    VOWEL_O,
   };
 
   int type_ = SIN;
   float tau1_ = 0.9f;
   float tau2_ = 0.05f;
+  float vt_len_ = 15.0f;
+  bool use_filter_ = false;
+  std::array<BpfFilter, 5> filters_;
+
+  // clang-format off
+  static constexpr float params[5][5] = {
+	{ 1.60f, 0.70f, 1.10f, 1.00f, 1.00f },
+	{ 0.70f, 1.40f, 1.20f, 1.00f, 1.00f },
+	{ 0.80f, 0.90f, 0.90f, 1.00f, 1.00f },
+	{ 1.20f, 1.30f, 1.10f, 1.00f, 1.00f },
+	{ 1.15f, 0.50f, 1.20f, 1.00f, 1.00f },
+  };
+  // clang-format on
 
   void on_debug_gui() {
     if (device_ == 0) return;
@@ -203,7 +251,7 @@ class AudioDevice {
       SDL_PauseAudioDevice(device_, 1);
     }
 
-    const char* TYPE_NAME[] = {"Sin", "Saw", "Rosenberg"};
+    const char* TYPE_NAME[] = {"Sin", "Rosenberg"};
     ImGui::Combo("type", &type_, TYPE_NAME,
                  static_cast<int>(std::size(TYPE_NAME)));
     switch (type_) {
@@ -229,25 +277,74 @@ class AudioDevice {
     };
     // clang-format on
 
+    bool kick = false;
+
     ImGui::Spacing();
     for (auto it : scale) {
       ImGui::SameLine();
       if (ImGui::Button(it.name)) {
-        SDL_LockAudioDevice(device_);
         switch (type_) {
           case SIN:
-            sound_data_ = make_sin(spec_.freq, it.hz);
-            break;
-          case SAW:
-            sound_data_ = make_saw(spec_.freq, it.hz);
+            raw_sound_data_ = make_sin(spec_.freq, it.hz);
             break;
           case ROSENBERG:
-            sound_data_ = make_rosenberg(spec_.freq, it.hz, tau1_, tau2_);
+            raw_sound_data_ = make_rosenberg(spec_.freq, it.hz, tau1_, tau2_);
             break;
         }
-        player_.setup(sound_data_.data(), sound_data_.size());
-        SDL_UnlockAudioDevice(device_);
+        kick = true;
       }
+    }
+
+    ImGui::Checkbox("Use filter", &use_filter_);
+
+    if (use_filter_) {
+      ImGui::InputFloat("VT len", &vt_len_);
+      // clang-format off
+	  const struct {
+	    const char* name;
+	    int index;
+	  } vowel[] = {
+		  { "A##vowel", VOWEL_A, },
+		  { "I##vowel", VOWEL_I, },
+		  { "U##vowel", VOWEL_U, },
+		  { "E##vowel", VOWEL_E, },
+		  { "O##vowel", VOWEL_O, },
+	  };
+      // clang-format on
+
+      ImGui::Spacing();
+      for (auto it : vowel) {
+        ImGui::SameLine();
+        if (ImGui::Button(it.name)) {
+          for (int i = 0; i < 5; ++i) {
+            float formant = ((34000.0f * (2 * i + 1)) / (4.0f * vt_len_)) *
+                            params[it.index][i];
+            filters_[i].setup(spec_.freq, formant, 20.0f);
+          }
+          kick = true;
+        }
+      }
+    }
+
+    if (kick) {
+      SDL_LockAudioDevice(device_);
+      if (use_filter_) {
+        const auto f = [&](float in) {
+          float out = 0.0f;
+          for (int i = 0; i < 5; ++i) {
+            out += filters_[i].apply(in);
+          }
+          return out;
+        };
+
+        sound_data_.resize(raw_sound_data_.size());
+        std::transform(raw_sound_data_.begin(), raw_sound_data_.end(),
+                       sound_data_.begin(), f);
+      } else {
+        sound_data_.assign(raw_sound_data_.begin(), raw_sound_data_.end());
+      }
+      player_.setup(sound_data_.data(), sound_data_.size());
+      SDL_UnlockAudioDevice(device_);
     }
   }
 };

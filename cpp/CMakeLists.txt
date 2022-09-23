@@ -10,5 +10,6 @@ endif()
 
 add_executable(asset-manage asset-manage.cpp)
 add_executable(make-wav make-wav.cpp)
+add_executable(object-pool object-pool.cpp)
 add_executable(structured-bindings structured-bindings.cpp)
 add_executable(task-schedule task-schedule.cpp)

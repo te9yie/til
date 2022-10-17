@@ -74,7 +74,7 @@ class Query {
   explicit Query(Chunk* chunk) {
     for (auto it = chunk; it && !chunk_; it = it->next_chunk()) {
       if (it->contains<Ts...>()) {
-        chunk_ = chunk;
+        chunk_ = it;
       }
     }
   }

@@ -7,8 +7,7 @@
 namespace task {
 
 // Context.
-template <typename Tag>
-class Context : public t9::Singleton<Context<Tag>> {
+class Context : public t9::Singleton<Context> {
  private:
   // TypeIndex.
   template <typename T>
@@ -63,21 +62,11 @@ class Context : public t9::Singleton<Context<Tag>> {
     auto e = static_cast<Entry<T>*>(entries_[i - 1].get());
     return e->x.get();
   }
+
+  template <typename T>
+  std::size_t index() const {
+    return TypeIndex<T>::index;
+  }
 };
-
-template <typename T, typename Tag>
-inline T* add(Context<Tag>& ctx, std::unique_ptr<T> p) {
-  return ctx.add(p);
-}
-
-template <typename T, typename Tag, typename... Args>
-inline T* add_with(Context<Tag>& ctx, Args&&... args) {
-  return ctx.template add_with<T>(std::forward<Args>(args)...);
-}
-
-template <typename T, typename Tag>
-inline T* get(const Context<Tag>& ctx) {
-  return ctx.template get<T>();
-}
 
 }  // namespace task

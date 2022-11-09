@@ -3,15 +3,22 @@
 
 #include "app.h"
 #include "context.h"
+#include "phase.h"
+#include "task.h"
 
 int main() {
-  task::Context<struct App> ctx;
+  task::Context ctx;
+  task::Phase phase;
 
   ctx.add_with<int>(1);
-  task::add_with<float>(ctx, 1.5f);
 
-  std::cout << "int = " << *ctx.get<int>() << std::endl;
-  std::cout << "float = " << *task::get<float>(ctx) << std::endl;
+  phase.add_task(std::make_shared<task::FuncTask<int>>(
+      [](int i) { std::cout << "int = " << i << std::endl; }));
+  phase.add_task(std::make_shared<task::FuncTask<int>>(
+      [](int i) { std::cout << "int +2 = " << i + 2 << std::endl; }));
+
+  phase.run(ctx);
+  phase.run(ctx);
 
   task::App app;
   return app.run() ? EXIT_SUCCESS : EXIT_FAILURE;

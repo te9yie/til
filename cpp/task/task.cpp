@@ -5,12 +5,20 @@ namespace task {
 /*explicit*/ Task::Task(const TaskPermission& permission)
     : permission_(permission) {}
 
-void Task::exec(const Context& ctx) { on_exec(ctx, &work_); }
-
 bool Task::add_dependency(Task* task) {
   if (is_depended_(task)) return false;
   dependencies_.emplace_back(task);
   return true;
+}
+
+/*virtual*/ bool Task::on_can_exec() const /*override*/ {
+  for (auto task : dependencies_) {
+    if (!task->is_state(State::Done)) return false;
+  }
+  return true;
+}
+/*virtual*/ void Task::on_exec() /*override*/ {
+  on_exec_task(context_, &work_);
 }
 
 bool Task::is_depended_(Task* task) const {

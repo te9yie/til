@@ -12,8 +12,8 @@ struct task_traits {
   static void set_permission(TaskPermission* permission) {
     permission->set_read<T>();
   }
-  static T apply_args(const Context& ctx, TaskWork* /*work*/) {
-    return *ctx.get<T>();
+  static T apply_args(const Context* ctx, TaskWork* /*work*/) {
+    return *ctx->get<T>();
   }
 };
 template <typename T>
@@ -21,8 +21,8 @@ struct task_traits<T&> {
   static void set_permission(TaskPermission* permission) {
     permission->set_write<T>();
   }
-  static T& apply_args(const Context& ctx, TaskWork* /*work*/) {
-    return *ctx.get<T>();
+  static T& apply_args(const Context* ctx, TaskWork* /*work*/) {
+    return *ctx->get<T>();
   }
 };
 template <typename T>
@@ -30,8 +30,8 @@ struct task_traits<const T&> {
   static void set_permission(TaskPermission* permission) {
     permission->set_read<T>();
   }
-  static const T& apply_args(const Context& ctx, TaskWork* /*work*/) {
-    return *ctx.get<T>();
+  static const T& apply_args(const Context* ctx, TaskWork* /*work*/) {
+    return *ctx->get<T>();
   }
 };
 template <typename T>
@@ -39,8 +39,8 @@ struct task_traits<T*> {
   static void set_permission(TaskPermission* permission) {
     permission->set_write<T>();
   }
-  static T* apply_args(const Context& ctx, TaskWork* /*work*/) {
-    return ctx.get<T>();
+  static T* apply_args(const Context* ctx, TaskWork* /*work*/) {
+    return ctx->get<T>();
   }
 };
 template <typename T>
@@ -48,8 +48,8 @@ struct task_traits<const T*> {
   static void set_permission(TaskPermission* permission) {
     permission->set_read<T>();
   }
-  static const T* apply_args(const Context& ctx, TaskWork* /*work*/) {
-    return ctx.get<T>();
+  static const T* apply_args(const Context* ctx, TaskWork* /*work*/) {
+    return ctx->get<T>();
   }
 };
 

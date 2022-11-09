@@ -9,3 +9,5 @@ target_compile_options(task PRIVATE
     $<$<CXX_COMPILER_ID:MSVC>:/W4 /utf-8>
     $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-W -Wall>)
 target_include_directories(task PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+target_link_libraries(task PRIVATE
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-thread>)

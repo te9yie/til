@@ -1,13 +1,23 @@
 #include "phase.h"
 
+#include <algorithm>
+#include <cassert>
 #include <iterator>
+
+#include "job.h"
 
 namespace task {
 
 void Phase::run(const Context& ctx) {
-  for (auto& task : tasks_) {
-    task->exec(ctx);
-  }
+  auto executor = ctx.get<JobExecutor>();
+  assert(executor);
+  std::for_each(tasks_.begin(), tasks_.end(), [executor, &ctx](auto& task) {
+    task->set_context(&ctx);
+    task->reset_state();
+    executor->submit(task);
+  });
+  executor->kick();
+  executor->join();
 }
 
 void Phase::add_task(std::shared_ptr<Task> task) {

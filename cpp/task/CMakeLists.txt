@@ -10,4 +10,4 @@ target_compile_options(task PRIVATE
     $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-W -Wall>)
 target_include_directories(task PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(task PRIVATE
-    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-thread>)
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-pthread>)

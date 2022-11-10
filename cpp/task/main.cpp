@@ -7,7 +7,7 @@
 #include "scheduler.h"
 
 void func(int i) {
-  std::cout << std::this_thread::get_id() << " int = " << i++ << std::endl;
+  std::cout << std::this_thread::get_id() << " int = " << i << std::endl;
   std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 void send(task::EventSender<int> sender) {
@@ -64,8 +64,8 @@ int main() {
   app.insert_phase<struct PerfPhase>(task::Phase<task::FirstPhase>::id,
                                      "PerfPhase");
 
-  app.add_task("func", func);
   app.add_task("count", count);
+  app.add_task("func", func);
   app.add_task("send", send);
   app.add_task("recv", recv);
   app.add_task_in_phase<task::LastPhase>("show phases", show_phases);

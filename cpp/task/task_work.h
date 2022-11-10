@@ -15,8 +15,7 @@ struct EventReaderIndex {
 // TaskWork.
 class TaskWork {
  private:
-  std::unordered_map<t9::type_int, std::unique_ptr<EventReaderIndex>>
-      event_reader_indices_;
+  std::unordered_map<t9::type_int, EventReaderIndex> event_reader_indices_;
 
  public:
   template <typename T>
@@ -24,12 +23,11 @@ class TaskWork {
     auto i = t9::type2int<T>::value();
     auto it = event_reader_indices_.find(i);
     if (it == event_reader_indices_.end()) {
-      auto p = std::make_unique<EventReaderIndex>();
-      auto r = event_reader_indices_.emplace(i, std::move(p));
+      auto r = event_reader_indices_.emplace(i, EventReaderIndex{});
       assert(r.second);
       it = r.first;
     }
-    return &it->second->index;
+    return &it->second.index;
   }
 };
 

@@ -19,6 +19,8 @@ class Scheduler {
   bool insert_phase(PhaseId next_id, std::unique_ptr<Phase> p);
 
   bool add_task(PhaseId id, std::shared_ptr<Task> task);
+
+  const std::list<std::unique_ptr<Phase>>& phases() const { return phases_; }
 };
 
 }  // namespace task

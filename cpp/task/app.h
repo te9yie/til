@@ -5,6 +5,7 @@
 #include <string>
 
 #include "context.h"
+#include "event.h"
 #include "scheduler.h"
 #include "t9/func_traits.h"
 #include "task.h"
@@ -43,6 +44,13 @@ class App {
   template <typename F>
   void set_runner(F f) {
     runner_ = f;
+  }
+
+  template <typename T>
+  void add_event() {
+    context.add_with<Event<T>>();
+    add_task_in_phase<FirstPhase>("update event",
+                                  [](Event<T>* e) { e->update(); });
   }
 
   template <typename PhaseT, typename F>

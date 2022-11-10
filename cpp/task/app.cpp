@@ -10,11 +10,11 @@ App::App() {
   context.add_with<JobExecutor>();
   auto scheduler = context.add_with<Scheduler>();
 
-  scheduler->add_phase(make_phase<FirstPhase>());
-  scheduler->add_phase(make_phase<PreUpdatePhase>());
-  scheduler->add_phase(make_phase<UpdatePhase>());
-  scheduler->add_phase(make_phase<PostUpdatePhase>());
-  scheduler->add_phase(make_phase<LastPhase>());
+  scheduler->add_phase(make_phase<FirstPhase>("FirstPhase"));
+  scheduler->add_phase(make_phase<PreUpdatePhase>("PreUpdatePhase"));
+  scheduler->add_phase(make_phase<UpdatePhase>("UpdatePhase"));
+  scheduler->add_phase(make_phase<PostUpdatePhase>("PostUpdatePhase"));
+  scheduler->add_phase(make_phase<LastPhase>("LastPhase"));
 }
 
 void App::update() {

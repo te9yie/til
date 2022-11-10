@@ -3,6 +3,7 @@
 #include <cassert>
 
 #include "job.h"
+#include "scheduler.h"
 
 namespace task {
 

@@ -1,12 +1,11 @@
 #pragma once
-#include <cassert>
 #include <functional>
 #include <memory>
 #include <string>
 
 #include "context.h"
 #include "event.h"
-#include "scheduler.h"
+#include "phase.h"
 #include "t9/func_traits.h"
 #include "task.h"
 
@@ -40,6 +39,11 @@ class App {
 
   void update();
   bool run();
+
+  template <typename F>
+  void preset(F f) {
+    f(this);
+  }
 
   template <typename F>
   void set_runner(F f) {

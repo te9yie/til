@@ -4,10 +4,7 @@
 #include <unordered_map>
 
 #include "app.h"
-#include "context.h"
-#include "job.h"
-#include "phase.h"
-#include "task.h"
+#include "scheduler.h"
 
 void func(int i) {
   std::cout << std::this_thread::get_id() << " int = " << i++ << std::endl;

@@ -13,7 +13,10 @@ void func(int i) {
   std::cout << std::this_thread::get_id() << " int = " << i++ << std::endl;
   std::this_thread::sleep_for(std::chrono::seconds(1));
 }
-void send(task::EventSender<int> sender) { sender.send(2); }
+void send(task::EventSender<int> sender) {
+  sender.send(2);
+  sender.send(10);
+}
 void recv(task::EventReceiver<int> recv) {
   recv.each([](int i) { std::cout << "recv: " << i << std::endl; });
 }
@@ -60,6 +63,8 @@ int main() {
   task::App app;
   app.context.add_with<int>(1);
   app.add_event<int>();
+  app.insert_phase<struct PerfPhase>(task::Phase<task::FirstPhase>::id,
+                                     "PerfPhase");
 
   app.add_task("send", send);
   for (int i = 0; i < 10; ++i) {

@@ -3,6 +3,7 @@
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -31,10 +32,12 @@ class Job {
   };
 
  private:
+  std::string name_;
   State state_ = State::None;
   JobObserver* observer_ = nullptr;
 
  public:
+  explicit Job(std::string_view name) : name_(name) {}
   virtual ~Job() = default;
 
   bool can_exec() const { return on_can_exec(); }
@@ -43,6 +46,7 @@ class Job {
   bool change_state(State state);
   bool reset_state() { return change_state(State::None); }
   bool is_state(State state) const { return state_ == state; }
+  std::string_view name() const { return name_; }
 
   void set_observer(JobObserver* observer) { observer_ = observer; }
 
@@ -70,6 +74,8 @@ class JobExecutor : private t9::NonCopyable, public JobObserver {
   void submit(std::shared_ptr<Job> job);
   void kick();
   void join();
+
+  std::size_t thread_count() const { return threads_.size(); }
 
  public:
   // JobObserver.

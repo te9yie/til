@@ -1,6 +1,7 @@
 #pragma once
 #include <deque>
 #include <functional>
+#include <string>
 
 #include "context.h"
 #include "job.h"
@@ -20,7 +21,7 @@ class Task : private t9::NonCopyable, public Job {
   const Context* context_ = nullptr;
 
  public:
-  explicit Task(const TaskPermission& permission);
+  Task(std::string_view name, const TaskPermission& permission);
   virtual ~Task() = default;
 
   void set_context(const Context* ctx) { context_ = ctx; }
@@ -52,8 +53,8 @@ class FuncTask : public Task {
   FuncType func_;
 
  public:
-  explicit FuncTask(FuncType f)
-      : Task(make_task_permission<Args...>()), func_(f) {}
+  FuncTask(std::string_view name, FuncType f)
+      : Task(name, make_task_permission<Args...>()), func_(f) {}
 
  protected:
   virtual void on_exec_task(const Context* ctx, TaskWork* work) override {

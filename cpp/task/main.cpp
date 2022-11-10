@@ -14,21 +14,12 @@ void func(int i) {
 }
 
 int main() {
-  task::Context ctx;
-  auto executor = ctx.add_with<task::JobExecutor>();
-  executor->start(2);
-
-  task::Phase phase;
-
-  ctx.add_with<int>(1);
+  task::App app;
+  app.context.add_with<int>(1);
 
   for (int i = 0; i < 10; ++i) {
-    phase.add_task(std::make_shared<task::FuncTask<int>>(func));
+    app.add_task("func", func);
   }
 
-  phase.setup_task_dependencies();
-  phase.run(ctx);
-
-  task::App app;
   return app.run() ? EXIT_SUCCESS : EXIT_FAILURE;
 }

@@ -2,8 +2,8 @@
 
 namespace task {
 
-/*explicit*/ Task::Task(const TaskPermission& permission)
-    : permission_(permission) {}
+Task::Task(std::string_view name, const TaskPermission& permission)
+    : Job(name), permission_(permission) {}
 
 bool Task::add_dependency(Task* task) {
   if (is_depended_(task)) return false;

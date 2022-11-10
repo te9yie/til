@@ -8,7 +8,7 @@
 
 namespace task {
 
-void Phase::run(const Context& ctx) {
+void PhaseData::run(const Context& ctx) {
   auto executor = ctx.get<JobExecutor>();
   assert(executor);
   std::for_each(tasks_.begin(), tasks_.end(), [executor, &ctx](auto& task) {
@@ -20,11 +20,11 @@ void Phase::run(const Context& ctx) {
   executor->join();
 }
 
-void Phase::add_task(std::shared_ptr<Task> task) {
+void PhaseData::add_task(std::shared_ptr<Task> task) {
   tasks_.emplace_back(std::move(task));
 }
 
-void Phase::setup_task_dependencies() {
+void PhaseData::setup_task_dependencies() {
   for (auto it = tasks_.begin(), end = tasks_.end(); it != end; ++it) {
     using rev_iter = std::reverse_iterator<decltype(it)>;
     auto task = it->get();

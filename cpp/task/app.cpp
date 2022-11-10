@@ -48,6 +48,15 @@ bool App::setup_() {
   return true;
 }
 
+bool App::add_phase_(std::unique_ptr<PhaseData> p) {
+  auto scheduler = context.get<Scheduler>();
+  return scheduler->add_phase(std::move(p));
+}
+bool App::insert_phase_(PhaseId next_phase_id, std::unique_ptr<PhaseData> p) {
+  auto scheduler = context.get<Scheduler>();
+  return scheduler->insert_phase(next_phase_id, std::move(p));
+}
+
 bool App::add_task_in_phase_(PhaseId phase_id, std::shared_ptr<Task> task) {
   auto scheduler = context.get<Scheduler>();
   return scheduler->add_task(phase_id, std::move(task));

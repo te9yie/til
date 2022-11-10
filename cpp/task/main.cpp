@@ -18,7 +18,7 @@ void recv(task::EventReceiver<int> recv) {
   recv.each([](int i) { std::cout << "recv: " << i << std::endl; });
 }
 
-void show_tasks(const task::Phase* phase) {
+void show_tasks(const task::PhaseData* phase) {
   std::unordered_map<const task::Task*, int> task_depth;
   int max_depth = 0;
   for (auto& task : phase->tasks()) {

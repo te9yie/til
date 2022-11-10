@@ -53,12 +53,22 @@ class App {
                                   [](Event<T>* e) { e->update(); });
   }
 
+  template <typename T>
+  bool add_phase(std::string_view name) {
+    auto phase = make_phase<T>(name);
+    return add_phase_(std::move(phase));
+  }
+  template <typename T>
+  bool insert_phase(PhaseId next_phase_id, std::string_view name) {
+    auto phase = make_phase<T>(name);
+    return insert_phase_(next_phase_id, std::move(phase));
+  }
+
   template <typename PhaseT, typename F>
   bool add_task_in_phase(std::string_view name, F f) {
     using args_type = typename t9::func_traits<F>::args_type;
-    return add_task_in_phase_(get_phase_id<PhaseT>(), name, f, args_type{});
+    return add_task_in_phase_(Phase<PhaseT>::id, name, f, args_type{});
   }
-
   template <typename F>
   bool add_task(std::string_view name, F f) {
     return add_task_in_phase<UpdatePhase>(name, f);
@@ -66,6 +76,9 @@ class App {
 
  private:
   bool setup_();
+
+  bool add_phase_(std::unique_ptr<PhaseData> p);
+  bool insert_phase_(PhaseId next_phase_id, std::unique_ptr<PhaseData> p);
 
   template <typename F, typename... Ts>
   bool add_task_in_phase_(PhaseId phase_id, std::string_view name, F f,

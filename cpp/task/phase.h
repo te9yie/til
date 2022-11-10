@@ -11,21 +11,21 @@ namespace task {
 // PhaseId.
 using PhaseId = t9::type_int;
 
-// get_phase_id.
-template <typename T>
-inline PhaseId get_phase_id() {
-  return t9::type2int<T>::value();
-}
-
 // Phase.
-class Phase {
+template <typename T>
+struct Phase {
+  static inline const PhaseId id = t9::type2int<T>::value();
+};
+
+// PhaseData.
+class PhaseData {
  private:
   PhaseId id_ = 0;
   std::string name_;
   std::deque<std::shared_ptr<Task>> tasks_;
 
  public:
-  Phase(PhaseId id, std::string_view name) : id_(id), name_(name) {}
+  PhaseData(PhaseId id, std::string_view name) : id_(id), name_(name) {}
 
   void setup_task_dependencies();
   void run(const Context& ctx);
@@ -39,8 +39,8 @@ class Phase {
 
 // make_phase.
 template <typename T>
-inline std::unique_ptr<Phase> make_phase(std::string_view name) {
-  return std::make_unique<Phase>(get_phase_id<T>(), name);
+inline std::unique_ptr<PhaseData> make_phase(std::string_view name) {
+  return std::make_unique<PhaseData>(Phase<T>::id, name);
 }
 
 }  // namespace task

@@ -13,11 +13,11 @@ void Scheduler::run(const Context& ctx) {
                 [&ctx](auto& p) { p->run(ctx); });
 }
 
-bool Scheduler::add_phase(std::unique_ptr<Phase> p) {
+bool Scheduler::add_phase(std::unique_ptr<PhaseData> p) {
   phases_.emplace_back(std::move(p));
   return true;
 }
-bool Scheduler::insert_phase(PhaseId next_id, std::unique_ptr<Phase> p) {
+bool Scheduler::insert_phase(PhaseId next_id, std::unique_ptr<PhaseData> p) {
   for (auto it = phases_.begin(); it != phases_.end(); ++it) {
     auto& phase = *it;
     if (next_id == phase->id()) {

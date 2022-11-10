@@ -17,6 +17,7 @@ void send(task::EventSender<int> sender) {
 void recv(task::EventReceiver<int> recv) {
   recv.each([](int i) { std::cout << "recv: " << i << std::endl; });
 }
+void count(int& i) { ++i; }
 
 void show_tasks(const task::PhaseData* phase) {
   std::unordered_map<const task::Task*, int> task_depth;
@@ -63,12 +64,17 @@ int main() {
   app.insert_phase<struct PerfPhase>(task::Phase<task::FirstPhase>::id,
                                      "PerfPhase");
 
+  app.add_task("func", func);
+  app.add_task("count", count);
   app.add_task("send", send);
-  for (int i = 0; i < 10; ++i) {
-    app.add_task("func", func);
-  }
   app.add_task("recv", recv);
   app.add_task_in_phase<task::LastPhase>("show phases", show_phases);
+
+  app.set_runner([](task::App* app) {
+    do {
+      app->update();
+    } while (*app->context.get<int>() < 5);
+  });
 
   return app.run() ? EXIT_SUCCESS : EXIT_FAILURE;
 }

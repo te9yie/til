@@ -85,10 +85,10 @@ class Query {
     using args_type = typename function_traits<F>::args_type;
     each(f, args_type{});
   }
-  template <typename F, typename... Ts>
-  void each(F f, type_list<Ts...> args) {
+  template <typename F, typename... As>
+  void each(F f, type_list<As...> args) {
     for (auto chunk = chunk_; chunk; chunk = chunk->next_chunk()) {
-      if (chunk->contains<Ts...>()) {
+      if (chunk->contains<As...>()) {
         chunk->each(f, args);
       }
     }

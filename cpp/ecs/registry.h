@@ -39,7 +39,7 @@ class Registry final {
     EntityId id = {entities_[index].generation, index};
     entities_[index].chunk = chunk;
     entities_[index].chunk_index = chunk_index;
-    *chunk->get<EntityId>(chunk_index) = id;
+    *chunk->template get<EntityId>(chunk_index) = id;
 
     return id;
   }

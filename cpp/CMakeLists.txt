@@ -1,15 +1,16 @@
 cmake_minimum_required(VERSION 3.14)
-project(til CXX)
+project(til)
 
-set(CMAKE_CXX_STANDARD 17)
-if(MSVC)
-    add_compile_options(/W4)
-else()
-    add_compile_options(-W -Wall)
-endif()
-
-add_executable(asset-manage asset-manage.cpp)
-add_executable(make-wav make-wav.cpp)
-add_executable(object-pool object-pool.cpp)
-add_executable(structured-bindings structured-bindings.cpp)
-add_executable(task-schedule task-schedule.cpp)
+foreach(item IN ITEMS
+        asset-manage
+        make-wav
+        object-pool
+        structured-bindings
+        task-schedule)
+    add_executable(${item} ${item}.cpp)
+    target_compile_features(${item} PRIVATE cxx_std_17)
+    target_compile_options(${item} PRIVATE
+        $<$<CXX_COMPILER_ID:MSVC>:/W4 /utf-8>
+        $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-W -Wall>)
+    target_include_directories(${item} PRIVATE .)
+endforeach()

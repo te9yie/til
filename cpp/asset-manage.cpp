@@ -132,7 +132,7 @@ class AssetManager : private AssetOwner {
 
  public:
   t9::Rc<Asset> load(std::string_view path) {
-    auto hash = t9::make_string_hash(path);
+    auto hash = t9::fxhash(path.data(), path.length());
     if (auto asset = find_(path, hash)) {
       return t9::Rc<Asset>(asset, true);
     }
@@ -158,7 +158,7 @@ class AssetManager : private AssetOwner {
     return t9::Rc<Asset>(asset, false);
   }
   t9::Rc<Asset> find(std::string_view path) {
-    auto hash = t9::make_string_hash(path);
+    auto hash = t9::fxhash(path.data(), path.length());
     if (auto asset = find_(path, hash)) {
       return t9::Rc<Asset>(asset, true);
     }

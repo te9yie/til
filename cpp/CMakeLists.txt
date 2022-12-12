@@ -3,6 +3,7 @@ project(til)
 
 foreach(item IN ITEMS
         asset-manage
+        command-battle
         make-wav
         object-pool
         structured-bindings
